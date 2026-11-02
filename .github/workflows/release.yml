@@ -1,0 +1,55 @@
+name: Publish release with install package
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag
+        default: v1.1.0
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pages: write
+  administration: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create or update release with the install package
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.event.inputs.tag || 'v1.1.0' }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" caiwubu-agent-v1.1.0.zip --clobber
+          else
+            gh release create "$TAG" caiwubu-agent-v1.1.0.zip \
+              --target "$GITHUB_SHA" \
+              --title "财务部 Agent 智能体套件 ${TAG}（个人版 ¥399 / 团队版 ¥3,000）" \
+              --notes-file release_notes.md
+          fi
+
+      - name: Enable GitHub Pages from main branch root
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -uo pipefail
+          BODY='{"build_type":"legacy","source":{"branch":"main","path":"/"}}'
+          if echo "$BODY" | gh api -X POST "repos/$GITHUB_REPOSITORY/pages" --input - ; then
+            echo "Pages enabled"
+          else
+            echo "$BODY" | gh api -X PUT "repos/$GITHUB_REPOSITORY/pages" --input -
+          fi
+
+      - name: Show result
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view "${{ github.event.inputs.tag || 'v1.1.0' }}"
+          gh api "repos/$GITHUB_REPOSITORY/pages" --jq '.html_url'
