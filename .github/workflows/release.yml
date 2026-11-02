@@ -31,16 +31,17 @@ jobs:
             gh release create "$TAG" caiwubu-agent-v1.1.0.zip --target "$GITHUB_SHA" --title "财务部 Agent 智能体套件 ${TAG}（个人版 ¥399 / 团队版 ¥3,000）" --notes-file release_notes.md
           fi
 
-      - name: Enable GitHub Pages from main branch root
+      - name: Check GitHub Pages status
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -uo pipefail
-          BODY='{"build_type":"legacy","source":{"branch":"main","path":"/"}}'
-          if echo "$BODY" | gh api -X POST "repos/$GITHUB_REPOSITORY/pages" --input -; then
-            echo "Pages enabled"
+          # 开启 Pages 需要仓库管理员权限，工作流令牌没有该权限，因此这里只做状态检查。
+          # 首次部署请由管理员在 Settings › Pages 选择 Deploy from a branch → main → /(root) 并保存一次。
+          if URL=$(gh api "repos/$GITHUB_REPOSITORY/pages" --jq '.html_url' 2>/dev/null); then
+            echo "GitHub Pages 已启用：$URL"
           else
-            echo "$BODY" | gh api -X PUT "repos/$GITHUB_REPOSITORY/pages" --input -
+            echo "::warning::GitHub Pages 尚未启用，请管理员在 Settings › Pages 选择 main / (root) 保存一次。"
           fi
 
       - name: Show result
@@ -48,4 +49,4 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release view "${{ github.event.inputs.tag || 'v1.1.0' }}"
-          gh api "repos/$GITHUB_REPOSITORY/pages" --jq '.html_url'
+          gh api "repos/$GITHUB_REPOSITORY/pages" --jq '.html_url' || echo "Pages 未启用（见上一步提示）"
