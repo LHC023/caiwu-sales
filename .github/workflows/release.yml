@@ -12,7 +12,6 @@ on:
 permissions:
   contents: write
   pages: write
-  administration: write
 
 jobs:
   release:
@@ -29,10 +28,7 @@ jobs:
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" caiwubu-agent-v1.1.0.zip --clobber
           else
-            gh release create "$TAG" caiwubu-agent-v1.1.0.zip \
-              --target "$GITHUB_SHA" \
-              --title "财务部 Agent 智能体套件 ${TAG}（个人版 ¥399 / 团队版 ¥3,000）" \
-              --notes-file release_notes.md
+            gh release create "$TAG" caiwubu-agent-v1.1.0.zip --target "$GITHUB_SHA" --title "财务部 Agent 智能体套件 ${TAG}（个人版 ¥399 / 团队版 ¥3,000）" --notes-file release_notes.md
           fi
 
       - name: Enable GitHub Pages from main branch root
@@ -41,7 +37,7 @@ jobs:
         run: |
           set -uo pipefail
           BODY='{"build_type":"legacy","source":{"branch":"main","path":"/"}}'
-          if echo "$BODY" | gh api -X POST "repos/$GITHUB_REPOSITORY/pages" --input - ; then
+          if echo "$BODY" | gh api -X POST "repos/$GITHUB_REPOSITORY/pages" --input -; then
             echo "Pages enabled"
           else
             echo "$BODY" | gh api -X PUT "repos/$GITHUB_REPOSITORY/pages" --input -
